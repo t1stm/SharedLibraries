@@ -8,17 +8,20 @@ namespace DatabaseManager;
 public class DatabaseManager<T> where T : Model<T>
 {
     private readonly string FileLocation;
-    private readonly object LockObject = new();
+    private readonly object ReadWriteLock = new();
     private readonly string ObjectName;
     private readonly Timer SaveTimer = new();
     private Action<string> Log { get; }
     private bool Modified;
 
+    /// <summary>
+    /// Creates a new DatabaseManager with a JSON backend.
+    /// </summary>
+    /// <param name="settings">Settings for the database manager.</param>
     public DatabaseManager(DatabaseSettings settings)
     {
         SaveTimer.Elapsed += ElapsedEvent;
         SaveTimer.Interval = 300000; // ms | 5 Minutes
-        SaveTimer.Start();
         var type = typeof(T);
         var name = type.Name;
         ObjectName = name.Length > 5 && name[^5..] is "Model" or "model" ? name[..^5] : name;
@@ -29,6 +32,11 @@ public class DatabaseManager<T> where T : Model<T>
     private List<T> Data { get; set; } = new();
     private FileStream? FileStream { get; set; }
 
+    /// <summary>
+    /// Event that handles the save timer.
+    /// </summary>
+    /// <param name="sender">Ignored. Usually it's the timer.</param>
+    /// <param name="e">Ignored. Usually it's empty.</param>
     private void ElapsedEvent(object? sender, ElapsedEventArgs e)
     {
         if (!Modified) return;
@@ -36,14 +44,21 @@ public class DatabaseManager<T> where T : Model<T>
         SaveToFile();
     }
 
+    /// <summary>
+    /// Read the database into memory.
+    /// </summary>
     public void ReadDatabase()
     {
         if (!File.Exists(FileLocation))
             SaveToFile(Enumerable.Empty<T>().ToList());
         ReadFile();
         CallLoadedMethod();
+        SaveTimer.Start();
     }
-
+    
+    /// <summary>
+    /// If current model has a OnLoaded override, calls it on every object in the database.
+    /// </summary>
     private void CallLoadedMethod()
     {
         var copy = Data.ToList();
@@ -57,6 +72,11 @@ public class DatabaseManager<T> where T : Model<T>
         Modified = true;
     }
 
+    /// <summary>
+    /// Searches the database using a template model.
+    /// </summary>
+    /// <param name="searchData">The search model you want to use.</param>
+    /// <returns>The found object in the database.</returns>
     public T? Read(T searchData)
     {
         T? data;
@@ -69,6 +89,10 @@ public class DatabaseManager<T> where T : Model<T>
         return data;
     }
 
+    /// <summary>
+    /// Gets a copy of the backing list.
+    /// </summary>
+    /// <returns>A copy of the backing list.</returns>
     public List<T> ReadCopy()
     {
         lock (Data)
@@ -77,6 +101,11 @@ public class DatabaseManager<T> where T : Model<T>
         }
     }
 
+    /// <summary>
+    /// Adds a new entry to the database.
+    /// </summary>
+    /// <param name="addModel">The object you want to add.</param>
+    /// <returns>The added object.</returns>
     public T Add(T addModel)
     {
         lock (Data)
@@ -92,7 +121,7 @@ public class DatabaseManager<T> where T : Model<T>
 
     private void ReadFile()
     {
-        lock (LockObject)
+        lock (ReadWriteLock)
         {
             try
             {
@@ -107,6 +136,9 @@ public class DatabaseManager<T> where T : Model<T>
         }
     }
 
+    /// <summary>
+    /// Saves the database.
+    /// </summary>
     public void SaveToFile()
     {
         lock (Data)
@@ -118,7 +150,7 @@ public class DatabaseManager<T> where T : Model<T>
 
     private void SaveToFile(List<T> data)
     {
-        lock (FileStream ?? new object())
+        lock (ReadWriteLock)
         {
             try
             {
