@@ -7,9 +7,19 @@ public class ExampleModel : Model<ExampleModel>
 {
     [JsonInclude]
     public static int RuntimeIndex;
+
+    [JsonIgnore]
+    private string _exampleData = $"This is a testing string \'{RuntimeIndex}\'";
     
     [JsonInclude] 
-    public string ExampleData = $"This is a testing string \'{RuntimeIndex}\'";
+    public string ExampleData {
+        get => _exampleData;
+        set
+        {
+            SetModified?.Invoke();
+            _exampleData = value;
+        } 
+    }
     public ExampleModel()
     {
         RuntimeIndex++;

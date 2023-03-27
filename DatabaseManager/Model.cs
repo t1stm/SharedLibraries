@@ -5,6 +5,7 @@ public abstract class Model<T>
     /// <summary>
     /// Action that is set by the DatabaseManager.
     /// Typically it's only meant to be called, so please don't replace it.
+    /// Also try to include it in your setters if you want to track edits immediately.
     /// </summary>
     public Action? SetModified;
     
