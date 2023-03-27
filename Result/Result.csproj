@@ -5,10 +5,10 @@
         
         <ImplicitUsings>enable</ImplicitUsings>
         <Nullable>enable</Nullable>
-        <PackageId>t1stm_shlib</PackageId>
+        <PackageId>t1stm.Result</PackageId>
         <Version>1.0.0</Version>
         <Authors>t1stm</Authors>
-        <Company>t1stm's den</Company>
+        <Company>kris@localhost</Company>
         <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
     </PropertyGroup>
 
