@@ -21,7 +21,7 @@ public class DatabaseManager<T> where T : Model<T>
     public DatabaseManager(DatabaseSettings settings)
     {
         SaveTimer.Elapsed += ElapsedEvent;
-        SaveTimer.Interval = 300000; // ms | 5 Minutes
+        SaveTimer.Interval = settings.SaveInterval;
         var type = typeof(T);
         var name = type.Name;
         ObjectName = name.Length > 5 && name[^5..] is "Model" or "model" ? name[..^5] : name;
@@ -40,7 +40,7 @@ public class DatabaseManager<T> where T : Model<T>
     private void ElapsedEvent(object? sender, ElapsedEventArgs e)
     {
         if (!Modified) return;
-        Log($"Saving \"{ObjectName}\" database.");
+        Log($"Saving \"{ObjectName}\" database in location \'{FileLocation}\'.");
         SaveToFile();
     }
 

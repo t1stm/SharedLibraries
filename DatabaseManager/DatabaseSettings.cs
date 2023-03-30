@@ -20,7 +20,12 @@ public class DatabaseSettings
     /// Logging action for the database.
     /// </summary>
     public Action<string> LogAction { get; init; } = _ => { };
-    
+
+    /// <summary>
+    /// How often the database checks for changes and saves itself in miliseconds.
+    /// </summary>
+    public double SaveInterval { get; init; } = 5_000_000; // 5 Minutes
+
     /// <summary>
     /// Settings object for the DatabaseManager
     /// </summary>
