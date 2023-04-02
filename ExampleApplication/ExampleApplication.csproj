@@ -9,6 +9,7 @@
 
     <ItemGroup>
       <ProjectReference Include="..\DatabaseManager\DatabaseManager.csproj" />
+      <ProjectReference Include="..\Result\Result.csproj" />
     </ItemGroup>
 
 </Project>

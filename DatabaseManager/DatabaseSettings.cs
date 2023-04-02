@@ -29,7 +29,8 @@ public class DatabaseSettings
     /// <summary>
     /// Settings object for the DatabaseManager
     /// </summary>
-    /// <param name="databaseDirectory">Directory of the database file. Throws a DirectoryNotFoundException if unset or non-existant.</param>
+    /// <param name="databaseDirectory">Directory of the database file.</param>
+    /// <exception cref="DirectoryNotFoundException">Exception that is thrown when the directory doesn't exist.</exception>
     public DatabaseSettings(string databaseDirectory)
     {
         if (!Directory.Exists(databaseDirectory)) 
