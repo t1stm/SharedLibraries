@@ -17,3 +17,12 @@ Has object edit tracking, but a function must be called in order to be registere
 An object that tries to imitate Result<OK, Error> in Rust. 
 
 Probably not worth the extra allocated memory, but still, I like my extended null-safety.
+
+-----
+
+## StreamSpreader
+
+A class that *spreads* data from one source to multiple streams using multiple threads.
+
+
+###### "Бог да пази господ"

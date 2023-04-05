@@ -6,6 +6,10 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DatabaseManager", "Database
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ExampleApplication", "ExampleApplication\ExampleApplication.csproj", "{81B2B30F-42B7-476B-8123-80060BE2EC06}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "StreamSpreader", "StreamSpreader\StreamSpreader.csproj", "{D2B865EB-91BF-4A18-BE74-94DAF66F07C9}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "StreamSpreader.UnitTests", "StreamSpreader.UnitTests\StreamSpreader.UnitTests.csproj", "{91131800-F8AB-43EA-9CE0-E0F8D55F6163}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -24,5 +28,13 @@ Global
 		{81B2B30F-42B7-476B-8123-80060BE2EC06}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{81B2B30F-42B7-476B-8123-80060BE2EC06}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{81B2B30F-42B7-476B-8123-80060BE2EC06}.Release|Any CPU.Build.0 = Release|Any CPU
+		{D2B865EB-91BF-4A18-BE74-94DAF66F07C9}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{D2B865EB-91BF-4A18-BE74-94DAF66F07C9}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{D2B865EB-91BF-4A18-BE74-94DAF66F07C9}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{D2B865EB-91BF-4A18-BE74-94DAF66F07C9}.Release|Any CPU.Build.0 = Release|Any CPU
+		{91131800-F8AB-43EA-9CE0-E0F8D55F6163}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{91131800-F8AB-43EA-9CE0-E0F8D55F6163}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{91131800-F8AB-43EA-9CE0-E0F8D55F6163}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{91131800-F8AB-43EA-9CE0-E0F8D55F6163}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 EndGlobal
