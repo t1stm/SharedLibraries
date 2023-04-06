@@ -270,7 +270,7 @@ public class StreamSpreader : Stream
 
         var buffer = new byte[BufferSize];
         int bytes_read;
-        while ((bytes_read = source.Read(buffer)) < 0)
+        while ((bytes_read = source.Read(buffer)) > 0)
         {
             if (readCancellationToken?.IsCancellationRequested ?? false) 
                 break;
