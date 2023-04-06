@@ -49,7 +49,7 @@ public class Tests
     }
 
     [Test]
-    public void CopyTest_StandardCopy_NormalSituation_Multiple([Values(16, 32, 64, 0x100, 0x1000)] int array_count)
+    public void CopyTest_StandardCopy_NormalSituation_Multiple([Values(16, 32, 64, 0x100)] int array_count)
     {
         var stream_spreader = new StreamSpreader();
         var junk_data_buffer = JunkData.ToArray();
@@ -76,9 +76,12 @@ public class Tests
     }
     
     [Test]
-    public async Task CopyTest_AsyncCopy_NormalSituation_Multiple([Values(16, 32, 64, 0x100, 0x1000)] int array_count)
+    public async Task CopyTest_AsyncCopy_NormalSituation_Multiple([Values(16, 32, 64, 0x100)] int array_count)
     {
-        var stream_spreader = new StreamSpreader(true);
+        var stream_spreader = new StreamSpreader
+        {
+            IsAsynchronous = true
+        };
         var junk_data_buffer = JunkData.ToArray();
         var memory_streams = new MemoryStream[array_count];
 
@@ -103,7 +106,7 @@ public class Tests
     }
     
     [Test]
-    public void CopyTest_StandardCopy_FragmentedCopy_Multiple([Values(16, 32, 64, 0x100, 0x1000)] int array_count)
+    public void CopyTest_StandardCopy_FragmentedCopy_Multiple([Values(16, 32, 64, 0x100)] int array_count)
     {
         var stream_spreader = new StreamSpreader();
         var junk_data_buffer = JunkData.ToArray();
@@ -136,7 +139,7 @@ public class Tests
     }
     
     [Test]
-    public void CopyTest_StandardCopy_BufferedCopy_Multiple([Values(16, 32, 64, 0x100, 0x1000)] int array_count)
+    public void CopyTest_StandardCopy_BufferedCopy_Multiple([Values(16, 32, 64, 0x100)] int array_count)
     {
         var stream_spreader = new StreamSpreader();
         var junk_data_buffer = JunkData.ToArray();

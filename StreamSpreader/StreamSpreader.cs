@@ -8,16 +8,23 @@ public class StreamSpreader : Stream
 {
     private readonly ConcurrentQueue<byte[]> Data = new();
     private readonly ConcurrentDictionary<Stream, Task> DestinationDictionary = new();
-    private readonly bool IsAsynchronous;
+    public bool IsAsynchronous { get; init; }
+    private readonly CancellationToken CancellationToken = CancellationToken.None;
     
-    public StreamSpreader(bool isAsynchronous = false)
+    public StreamSpreader(params Stream[] destinations)
     {
-        IsAsynchronous = isAsynchronous;
+        AddDestinations(destinations);
+    }
+    
+    public StreamSpreader(CancellationToken cancellationToken, params Stream[] destinations)
+    {
+        CancellationToken = cancellationToken;
+        AddDestinations(destinations);
     }
 
     public override void Flush()
     {
-        Task.WhenAll(DestinationDictionary.Values).Wait();
+        Task.WhenAll(DestinationDictionary.Values).Wait(CancellationToken);
     }
 
     public override async Task FlushAsync(CancellationToken cancellationToken)
@@ -54,7 +61,7 @@ public class StreamSpreader : Stream
         {
             async void AsyncWrite(Task _)
             {
-                await pair.Key.WriteAsync(owned_buffer);
+                await pair.Key.WriteAsync(owned_buffer, CancellationToken);
             }
             
             void SyncWrite(Task _)
@@ -63,7 +70,7 @@ public class StreamSpreader : Stream
             }
 
             DestinationDictionary[pair.Key] = pair.Value.ContinueWith(IsAsynchronous ? 
-                AsyncWrite : SyncWrite);
+                AsyncWrite : SyncWrite, CancellationToken);
         }
     }
 
@@ -89,13 +96,13 @@ public class StreamSpreader : Stream
 
     public void AddDestination(Stream stream)
     {
-        var factory = Task.Factory.StartNew(() => { });
+        var factory = Task.Factory.StartNew(() => { }, CancellationToken);
 
         foreach (var write_data in Data)
         {
             async void AsyncWrite(Task _)
             {
-                await stream.WriteAsync(write_data);
+                await stream.WriteAsync(write_data, CancellationToken);
             }
             
             void SyncWrite(Task _)
@@ -103,12 +110,20 @@ public class StreamSpreader : Stream
                 stream.Write(write_data);
             }
             
-            factory = factory.ContinueWith(IsAsynchronous ? AsyncWrite : SyncWrite);
+            factory = factory.ContinueWith(IsAsynchronous ? AsyncWrite : SyncWrite, CancellationToken);
         }
 
         if (!DestinationDictionary.TryAdd(stream, factory))
         {
             throw new Exception("Unable to add to destination dictionary.");
+        }
+    }
+
+    public void AddDestinations(params Stream[] destinations)
+    {
+        foreach (var stream in destinations)
+        {
+            AddDestination(stream);
         }
     }
 
