@@ -6,9 +6,9 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DatabaseManager", "Database
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ExampleApplication", "ExampleApplication\ExampleApplication.csproj", "{81B2B30F-42B7-476B-8123-80060BE2EC06}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "StreamSpreader", "StreamSpreader\StreamSpreader.csproj", "{D2B865EB-91BF-4A18-BE74-94DAF66F07C9}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Streams", "Streams\Streams.csproj", "{D2B865EB-91BF-4A18-BE74-94DAF66F07C9}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "StreamSpreader.UnitTests", "StreamSpreader.UnitTests\StreamSpreader.UnitTests.csproj", "{91131800-F8AB-43EA-9CE0-E0F8D55F6163}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Streams.UnitTests", "Streams.UnitTests\Streams.UnitTests.csproj", "{91131800-F8AB-43EA-9CE0-E0F8D55F6163}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

@@ -1,4 +1,6 @@
-namespace StreamSpreader.UnitTests;
+using Streams;
+
+namespace Streams.UnitTests;
 
 public class Tests
 {
@@ -19,7 +21,7 @@ public class Tests
     [Test]
     public void CopyTest_StandardCopy_NormalSituation_Multiple([Values(16, 32, 64, 0x100)] int array_count)
     {
-        var stream_spreader = new StreamSpreader();
+        var stream_spreader = new Streams.StreamSpreader();
         var junk_data_buffer = JunkData.ToArray();
         var memory_streams = new MemoryStream[array_count];
 

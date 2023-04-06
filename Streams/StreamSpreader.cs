@@ -2,7 +2,7 @@
 
 using System.Collections.Concurrent;
 
-namespace StreamSpreader;
+namespace Streams;
 
 public class StreamSpreader : Stream
 {
@@ -17,9 +17,8 @@ public class StreamSpreader : Stream
     protected readonly ConcurrentDictionary<Stream, Task> DestinationDictionary = new();
     
     /// <summary>
-    /// Change whether the copy tasks use asynchronous copying.
+    /// The given cancellation token.
     /// </summary>
-    public bool IsAsynchronous { get; init; }
     protected readonly CancellationToken CancellationToken = CancellationToken.None;
 
     /// <summary>
@@ -28,10 +27,19 @@ public class StreamSpreader : Stream
     protected const int BufferSize = 1024;
 
     /// <summary>
+    /// Change whether the copy tasks use asynchronous copying.
+    /// </summary>
+    public bool IsAsynchronous { get; init; }
+    
+    /// <summary>
+    /// Sets whether the StreamSpreader keeps all data passed through it cached if a source is added after data has been written.
+    /// </summary>
+    public bool KeepCached { get; init; }
+    
+    /// <summary>
     /// Creates a wrapper that allows writing to multiple streams at the same time.
     /// </summary>
     /// <param name="destinations">The destination streams.</param>
-    
     public StreamSpreader(params Stream[] destinations)
     {
         AddDestinations(destinations);
@@ -62,7 +70,8 @@ public class StreamSpreader : Stream
     /// <param name="cancellationToken"></param>
     public override async Task FlushAsync(CancellationToken cancellationToken)
     {
-        await Task.WhenAll(DestinationDictionary.Values).WaitAsync(CancellationToken).WaitAsync(cancellationToken);
+        await Task.WhenAll(DestinationDictionary.Values)
+            .WaitAsync(CancellationToken).WaitAsync(cancellationToken);
     }
 
     /// <summary>
@@ -180,7 +189,7 @@ public class StreamSpreader : Stream
         var new_task = new Task(() => { }, CancellationToken);
         new_task.Start();
 
-        foreach (var write_data in Data)
+        if (KeepCached) foreach (var write_data in Data)
         {
             async void AsyncWrite(Task _)
             {

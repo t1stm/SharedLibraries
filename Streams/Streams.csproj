@@ -5,7 +5,7 @@
 
         <ImplicitUsings>enable</ImplicitUsings>
         <Nullable>enable</Nullable>
-        <PackageId>t1stm.StreamSpreader</PackageId>
+        <PackageId>t1stm.Streams</PackageId>
         <Version>1.0.2</Version>
         <Authors>t1stm</Authors>
         <Description>A class that spreades data from one source to many streams.</Description>
@@ -13,6 +13,7 @@
         <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
         <PackageReadmeFile>README.md</PackageReadmeFile>
         <PackageLicenseExpression>Unlicense</PackageLicenseExpression>
+        <RootNamespace>StreamSpreader</RootNamespace>
     </PropertyGroup>
 
     <ItemGroup>
