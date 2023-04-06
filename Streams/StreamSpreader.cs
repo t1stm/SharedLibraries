@@ -62,6 +62,10 @@ public class StreamSpreader : Stream
     public override void Flush()
     {
         Task.WhenAll(DestinationDictionary.Values).Wait(CancellationToken);
+        foreach (var stream in DestinationDictionary.Keys)
+        {
+            stream.Flush();   
+        }
     }
     
     /// <summary>
@@ -72,6 +76,11 @@ public class StreamSpreader : Stream
     {
         await Task.WhenAll(DestinationDictionary.Values)
             .WaitAsync(CancellationToken).WaitAsync(cancellationToken);
+        
+        foreach (var stream in DestinationDictionary.Keys)
+        {
+            await stream.FlushAsync(cancellationToken);
+        }
     }
 
     /// <summary>
@@ -178,7 +187,35 @@ public class StreamSpreader : Stream
         Write(buffer.Span);
         return ValueTask.CompletedTask;
     }
-    
+
+    public override void Close()
+    {
+        Flush();
+        foreach (var stream in DestinationDictionary.Keys)
+        {
+            stream.Close();
+        }
+    }
+
+    public void Close(bool flush)
+    {
+        if (flush) Flush();
+        foreach (var stream in DestinationDictionary.Keys)
+        {
+            stream.Close();
+        }
+    }
+
+    public async Task CloseAsync(bool flush = true)
+    {
+        if (flush) await FlushAsync(CancellationToken);
+
+        foreach (var stream in DestinationDictionary.Keys)
+        {
+            stream.Close();
+        }
+    }
+
     /// <summary>
     /// Adds a new destination stream to the StreamSpreader.
     /// </summary>
