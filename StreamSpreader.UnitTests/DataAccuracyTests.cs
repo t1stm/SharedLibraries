@@ -13,39 +13,7 @@ public class Tests
         random.NextBytes(buffer);
 
         JunkData.Write(buffer);
-        Assert.AreEqual(dummy_length, JunkData.Length);
-    }
-
-    [Test]
-    public void CopyTest_BigCopy_NormalSituation_Multiple([Values(2, 4)] int array_count)
-    {
-        const int dummy_length = 0x1000000; // 16 MB
-        var stream_spreader = new StreamSpreader();
-        var random = new Random();
-        
-        var buffer = new byte[dummy_length];
-        random.NextBytes(buffer);
-        
-        var memory_streams = new MemoryStream[array_count];
-
-        for (var i = 0; i < memory_streams.Length; i++)
-        {
-            memory_streams[i] = new MemoryStream();
-        }
-
-        foreach (var stream in memory_streams)
-        {
-            stream_spreader.AddDestination(stream);   
-        }
-
-        stream_spreader.Write(buffer);
-        stream_spreader.Flush();
-
-        foreach (var stream in memory_streams)
-        {
-            var data = stream.ToArray();
-            CollectionAssert.AreEqual(buffer, data);
-        }
+        Assert.That(dummy_length, Is.EqualTo(JunkData.Length));
     }
 
     [Test]
@@ -170,6 +138,38 @@ public class Tests
         {
             var data = stream.ToArray();
             CollectionAssert.AreEqual(junk_data_buffer, data);
+        }
+    }
+    
+    [Test]
+    public void CopyTestBig_Copy_NormalSituation_Multiple([Values(2, 4)] int array_count)
+    {
+        const int dummy_length = 0x1000000; // 16 MB
+        var stream_spreader = new StreamSpreader();
+        var random = new Random();
+        
+        var buffer = new byte[dummy_length];
+        random.NextBytes(buffer);
+        
+        var memory_streams = new MemoryStream[array_count];
+
+        for (var i = 0; i < memory_streams.Length; i++)
+        {
+            memory_streams[i] = new MemoryStream();
+        }
+
+        foreach (var stream in memory_streams)
+        {
+            stream_spreader.AddDestination(stream);   
+        }
+
+        stream_spreader.Write(buffer);
+        stream_spreader.Flush();
+
+        foreach (var stream in memory_streams)
+        {
+            var data = stream.ToArray();
+            CollectionAssert.AreEqual(buffer, data);
         }
     }
 }
