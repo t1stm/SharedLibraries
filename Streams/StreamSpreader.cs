@@ -266,15 +266,33 @@ public class StreamSpreader : Stream
     /// <param name="readCancellationToken">A token that cancels the read action.</param>
     public void ReadStreamToEnd(Stream source, CancellationToken? readCancellationToken = null)
     {
-        readCancellationToken ??= CancellationToken.None;
-
+        var token = readCancellationToken ?? CancellationToken.None;
         var buffer = new byte[BufferSize];
         int bytes_read;
         while ((bytes_read = source.Read(buffer)) > 0)
         {
-            if (readCancellationToken?.IsCancellationRequested ?? false) 
+            if (token.IsCancellationRequested) 
                 break;
             Write(buffer, 0, bytes_read);
+        }
+    }
+    
+    /// <summary>
+    /// Reads an entire stream and writes it to all the destination streams.
+    /// </summary>
+    /// <param name="source">The souce stream.</param>
+    /// <param name="readCancellationToken">A token that cancels the read action.</param>
+    public async Task ReadStreamToEndAsync(Stream source, CancellationToken? readCancellationToken = null)
+    {
+        var token = readCancellationToken ?? CancellationToken.None;
+
+        var buffer = new byte[BufferSize];
+        int bytes_read;
+        while ((bytes_read = await source.ReadAsync(buffer, token)) > 0)
+        {
+            if (readCancellationToken?.IsCancellationRequested ?? false) 
+                break;
+            await WriteAsync(buffer, 0, bytes_read, token).ConfigureAwait(false);
         }
     }
 
