@@ -1,7 +1,5 @@
 ﻿#nullable enable
 
-using System.Collections.Concurrent;
-
 namespace Streams;
 
 public class StreamSpreader : Stream
@@ -9,12 +7,12 @@ public class StreamSpreader : Stream
     /// <summary>
     /// The cached written data.
     /// </summary>
-    protected readonly ConcurrentQueue<byte[]> Data = new();
+    protected readonly Queue<byte[]> Data = new();
     
     /// <summary>
     /// The dictionary that contains the Streams and their write tasks.
     /// </summary>
-    protected readonly ConcurrentDictionary<Stream, Task> DestinationDictionary = new();
+    protected readonly Dictionary<Stream, Task> DestinationDictionary = new();
     
     /// <summary>
     /// The given cancellation token.
@@ -22,9 +20,10 @@ public class StreamSpreader : Stream
     protected readonly CancellationToken CancellationToken = CancellationToken.None;
 
     /// <summary>
-    /// Buffer size in bytes.
+    /// This is the semaphore that is released when the writing source has finished writing to the destination.
+    /// Must be called in order to free all threads awaiting the subscribe method.
     /// </summary>
-    protected const int BufferSize = 1024;
+    private readonly SemaphoreSlim ClosingSemaphore = new(0);
 
     /// <summary>
     /// Change whether the copy tasks use asynchronous copying.
@@ -61,11 +60,7 @@ public class StreamSpreader : Stream
     /// </summary>
     public override void Flush()
     {
-        Task.WhenAll(DestinationDictionary.Values).Wait(CancellationToken);
-        foreach (var stream in DestinationDictionary.Keys)
-        {
-            stream.Flush();   
-        }
+        FlushAsync(CancellationToken).Wait(CancellationToken);
     }
     
     /// <summary>
@@ -74,9 +69,13 @@ public class StreamSpreader : Stream
     /// <param name="cancellationToken"></param>
     public override async Task FlushAsync(CancellationToken cancellationToken)
     {
-        await Task.WhenAll(DestinationDictionary.Values)
-            .WaitAsync(CancellationToken).WaitAsync(cancellationToken);
-        
+        await AwaitFinish(cancellationToken);
+
+        foreach (var task in DestinationDictionary.Values)
+        {
+            await task.WaitAsync(CancellationToken).WaitAsync(cancellationToken);
+        }
+
         foreach (var stream in DestinationDictionary.Keys)
         {
             await stream.FlushAsync(cancellationToken);
@@ -131,22 +130,21 @@ public class StreamSpreader : Stream
         var owned_buffer = new byte[array_slice.Count];
         array_slice.CopyTo(owned_buffer);
 
-        Data.Enqueue(owned_buffer);
-
-        foreach (var pair in DestinationDictionary)
+        lock (Data) Data.Enqueue(owned_buffer);
+        
+        lock (DestinationDictionary)
+        foreach (var (stream, task) in DestinationDictionary)
         {
-            async void AsyncWrite(Task _)
+            DestinationDictionary[stream] = task.ContinueWith(async _ =>
             {
-                await pair.Key.WriteAsync(owned_buffer, CancellationToken);
-            }
-            
-            void SyncWrite(Task _)
-            {
-                pair.Key.Write(owned_buffer);
-            }
-
-            DestinationDictionary[pair.Key] = pair.Value.ContinueWith(IsAsynchronous ? 
-                AsyncWrite : SyncWrite, CancellationToken);
+                if (!IsAsynchronous)
+                {
+                    stream.Write(owned_buffer);
+                    return;
+                }
+                
+                await stream.WriteAsync(owned_buffer, CancellationToken);
+            }, CancellationToken).Unwrap();
         }
     }
 
@@ -190,26 +188,6 @@ public class StreamSpreader : Stream
 
     public override void Close()
     {
-        Flush();
-        foreach (var stream in DestinationDictionary.Keys)
-        {
-            stream.Close();
-        }
-    }
-
-    public void Close(bool flush)
-    {
-        if (flush) Flush();
-        foreach (var stream in DestinationDictionary.Keys)
-        {
-            stream.Close();
-        }
-    }
-
-    public async Task CloseAsync(bool flush = true)
-    {
-        if (flush) await FlushAsync(CancellationToken);
-
         foreach (var stream in DestinationDictionary.Keys)
         {
             stream.Close();
@@ -226,19 +204,19 @@ public class StreamSpreader : Stream
         var new_task = new Task(() => { }, CancellationToken);
         new_task.Start();
 
-        if (KeepCached) foreach (var write_data in Data)
+        byte[][] data;
+        lock (Data)
         {
-            async void AsyncWrite(Task _)
-            {
-                await stream.WriteAsync(write_data, CancellationToken);
-            }
-            
-            void SyncWrite(Task _)
-            {
-                stream.Write(write_data);
-            }
-            
-            new_task = new_task.ContinueWith(IsAsynchronous ? AsyncWrite : SyncWrite, CancellationToken);
+            data = Data.ToArray();
+        }
+
+        if (KeepCached)
+        {
+            new_task = data.Aggregate(new_task, (current, write_data) => 
+                current.ContinueWith(async _ =>
+                {
+                    await stream.WriteAsync(write_data, CancellationToken);
+                }, CancellationToken).Unwrap());
         }
 
         if (!DestinationDictionary.TryAdd(stream, new_task))
@@ -260,40 +238,17 @@ public class StreamSpreader : Stream
     }
 
     /// <summary>
-    /// Reads an entire stream and writes it to all the destination streams.
+    /// This method closes the StreamSpreader, and causes every thread subscribed to the close method to be unblocked.
     /// </summary>
-    /// <param name="source">The souce stream.</param>
-    /// <param name="readCancellationToken">A token that cancels the read action.</param>
-    public void ReadStreamToEnd(Stream source, CancellationToken? readCancellationToken = null)
+    public void FinishWriting()
     {
-        var token = readCancellationToken ?? CancellationToken.None;
-        var buffer = new byte[BufferSize];
-        int bytes_read;
-        while ((bytes_read = source.Read(buffer)) > 0)
-        {
-            if (token.IsCancellationRequested) 
-                break;
-            Write(buffer, 0, bytes_read);
-        }
+        ClosingSemaphore.Release();
     }
-    
-    /// <summary>
-    /// Reads an entire stream and writes it to all the destination streams.
-    /// </summary>
-    /// <param name="source">The souce stream.</param>
-    /// <param name="readCancellationToken">A token that cancels the read action.</param>
-    public async Task ReadStreamToEndAsync(Stream source, CancellationToken? readCancellationToken = null)
-    {
-        var token = readCancellationToken ?? CancellationToken.None;
 
-        var buffer = new byte[BufferSize];
-        int bytes_read;
-        while ((bytes_read = await source.ReadAsync(buffer, token)) > 0)
-        {
-            if (readCancellationToken?.IsCancellationRequested ?? false) 
-                break;
-            await WriteAsync(buffer, 0, bytes_read, token).ConfigureAwait(false);
-        }
+    public async Task AwaitFinish(CancellationToken token)
+    {
+        await ClosingSemaphore.WaitAsync(token).WaitAsync(CancellationToken);
+        ClosingSemaphore.Release();
     }
 
     public override bool CanRead => false;
