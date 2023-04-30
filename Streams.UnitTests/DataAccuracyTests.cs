@@ -1,5 +1,3 @@
-using Streams;
-
 namespace Streams.UnitTests;
 
 public class Tests
@@ -21,7 +19,7 @@ public class Tests
     [Test]
     public void CopyTest_StandardCopy_NormalSituation_Multiple([Values(16, 32, 64, 0x100)] int array_count)
     {
-        var stream_spreader = new Streams.StreamSpreader();
+        var stream_spreader = new StreamSpreader();
         var junk_data_buffer = JunkData.ToArray();
         var memory_streams = new MemoryStream[array_count];
 
@@ -36,6 +34,7 @@ public class Tests
         }
 
         stream_spreader.Write(junk_data_buffer);
+        stream_spreader.FinishWriting();
         stream_spreader.Flush();
 
         foreach (var stream in memory_streams)
@@ -66,6 +65,7 @@ public class Tests
         }
 
         await stream_spreader.WriteAsync(junk_data_buffer);
+        stream_spreader.FinishWriting();
         await stream_spreader.FlushAsync();
 
         foreach (var stream in memory_streams)
@@ -99,6 +99,7 @@ public class Tests
         stream_spreader.Write(first_slice);
         stream_spreader.Write(second_slice);
         
+        stream_spreader.FinishWriting();
         stream_spreader.Flush();
 
         foreach (var stream in memory_streams)
@@ -134,6 +135,7 @@ public class Tests
             stream_spreader.Write(buffer, 0, read_bytes);
         }
         
+        stream_spreader.FinishWriting();
         stream_spreader.Flush();
 
         foreach (var stream in memory_streams)
@@ -166,6 +168,7 @@ public class Tests
         }
 
         stream_spreader.Write(buffer);
+        stream_spreader.FinishWriting();
         stream_spreader.Flush();
 
         foreach (var stream in memory_streams)
