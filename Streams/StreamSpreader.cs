@@ -1,18 +1,18 @@
-﻿#nullable enable
-
-namespace Streams;
+﻿namespace Streams;
 
 public class StreamSpreader : Stream
 {
     /// <summary>
     /// The cached written data.
     /// </summary>
-    protected readonly Queue<byte[]> Data = new();
+    protected readonly Queue<Memory<byte>> Data = new();
     
     /// <summary>
     /// The dictionary that contains the Streams and their write tasks.
     /// </summary>
     protected readonly Dictionary<Stream, Task> DestinationDictionary = new();
+    
+    protected readonly SemaphoreSlim DestinationDictionaryLock = new(1);
     
     /// <summary>
     /// The given cancellation token.
@@ -41,7 +41,7 @@ public class StreamSpreader : Stream
     /// <param name="destinations">The destination streams.</param>
     public StreamSpreader(params Stream[] destinations)
     {
-        AddDestinations(destinations);
+        AddDestinations(destinations).GetAwaiter().GetResult();
     }
     
     /// <summary>
@@ -52,7 +52,7 @@ public class StreamSpreader : Stream
     public StreamSpreader(CancellationToken cancellationToken, params Stream[] destinations)
     {
         CancellationToken = cancellationToken;
-        AddDestinations(destinations);
+        AddDestinations(destinations).GetAwaiter().GetResult();
     }
     
     /// <summary>
@@ -124,27 +124,35 @@ public class StreamSpreader : Stream
     /// <param name="count">The amount of bytes you want to write.</param>
     public override void Write(byte[] buffer, int offset, int count)
     {
-        var segment = new ArraySegment<byte>(buffer);
-        var array_slice = segment.Slice(offset, count);
-        
-        var owned_buffer = new byte[array_slice.Count];
-        array_slice.CopyTo(owned_buffer);
-
-        lock (Data) Data.Enqueue(owned_buffer);
-        
-        lock (DestinationDictionary)
-        foreach (var (stream, task) in DestinationDictionary)
+        DestinationDictionaryLock.WaitAsync(CancellationToken).GetAwaiter().GetResult();
+        try
         {
-            DestinationDictionary[stream] = task.ContinueWith(async _ =>
-            {
-                if (!IsAsynchronous)
+            var segment = buffer.AsSpan();
+            var array_slice = segment.Slice(offset, count);
+        
+            var owned_buffer = new byte[array_slice.Length];
+            array_slice.CopyTo(owned_buffer);
+
+            lock (Data) Data.Enqueue(owned_buffer);
+        
+            lock (DestinationDictionary)
+                foreach (var (stream, task) in DestinationDictionary)
                 {
-                    stream.Write(owned_buffer);
-                    return;
-                }
+                    DestinationDictionary[stream] = task.ContinueWith(async _ =>
+                    {
+                        if (!IsAsynchronous)
+                        {
+                            stream.Write(owned_buffer);
+                            return;
+                        }
                 
-                await stream.WriteAsync(owned_buffer, CancellationToken);
-            }, CancellationToken).Unwrap();
+                        await stream.WriteAsync(owned_buffer, CancellationToken);
+                    }, CancellationToken).Unwrap();
+                }
+        }
+        finally
+        {
+            DestinationDictionaryLock.Release();
         }
     }
 
@@ -199,29 +207,39 @@ public class StreamSpreader : Stream
     /// </summary>
     /// <param name="stream">The destination stream to add.</param>
     /// <exception cref="InvalidOperationException">An exception that is thrown when the stream is unable to be added to the stream dictionary.</exception>
-    public void AddDestination(Stream stream)
+    public async Task AddDestination(Stream stream)
     {
-        var new_task = new Task(() => { }, CancellationToken);
-        new_task.Start();
-
-        byte[][] data;
-        lock (Data)
+        await DestinationDictionaryLock.WaitAsync(CancellationToken);
+        try
         {
-            data = Data.ToArray();
+            var new_task = new Task(() => { }, CancellationToken);
+            new_task.Start();
+
+            Memory<byte>[] data;
+            lock (Data)
+            {
+                data = Data.ToArray();
+            }
+
+            if (KeepCached)
+            {
+                new_task = data.Aggregate(new_task, (current, write_data) =>
+                    current.ContinueWith(async old_task =>
+                        {
+                            await old_task;
+                            await stream.WriteAsync(write_data, CancellationToken);
+                        },
+                        CancellationToken).Unwrap());
+            }
+
+            if (!DestinationDictionary.TryAdd(stream, new_task))
+            {
+                throw new InvalidOperationException("Unable to add to destination dictionary.");
+            }
         }
-
-        if (KeepCached)
+        finally
         {
-            new_task = data.Aggregate(new_task, (current, write_data) => 
-                current.ContinueWith(async _ =>
-                {
-                    await stream.WriteAsync(write_data, CancellationToken);
-                }, CancellationToken).Unwrap());
-        }
-
-        if (!DestinationDictionary.TryAdd(stream, new_task))
-        {
-            throw new InvalidOperationException("Unable to add to destination dictionary.");
+            DestinationDictionaryLock.Release();
         }
     }
 
@@ -229,11 +247,11 @@ public class StreamSpreader : Stream
     /// Adds multiple destination streams to the StreamSpreader.
     /// </summary>
     /// <param name="destinations">The destination streams you want to add.</param>
-    public void AddDestinations(params Stream[] destinations)
+    public async Task AddDestinations(params Stream[] destinations)
     {
         foreach (var stream in destinations)
         {
-            AddDestination(stream);
+            await AddDestination(stream);
         }
     }
 
